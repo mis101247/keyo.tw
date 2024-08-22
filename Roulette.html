@@ -399,13 +399,6 @@
       // 玩法10：選擇最近出現頻率增加的數字
       const trendingNumbers = findTrendingNumbers(numbers, 20, 5);
       addPlayItem('玩法10', `選擇最近出現頻率增加的數字：${trendingNumbers.join(', ')}`, '這些數字最近出現頻率有所增加');
-
-      function updateZoneCombinationAnalysis() {
-        const analysisDiv = document.getElementById('zoneCombinationAnalysis');
-        const recommendation = analyzeZoneCombinationBet();
-        analysisDiv.innerHTML = `<pre>${recommendation}</pre>`;
-      }
-      updateZoneCombinationAnalysis()
     }
 
     function addPlayItem(title, strategy, explanation) {
