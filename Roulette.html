@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>輪盤數字機率計算器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    h1,
+    h2,
+    h3 {
+      color: #333;
+      text-align: center;
+    }
+
+    .section {
+      background-color: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    input,
+    button {
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    input[type="number"] {
+      width: 100px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #numbersList {
+      list-style-type: none;
+      padding: 0;
+      max-height: 100px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      margin-top: 10px;
+    }
+
+    #numbersList li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    .probability-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .probability-table th,
+    .probability-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .probability-table th {
+      background-color: #f2f2f2;
+    }
+
+    #topProbabilities,
+    #recommendedPlays {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .probability-item,
+    .play-item {
+      background-color: #e9e9e9;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    #hotColdNumbers {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .hot-cold-column {
+      flex: 1;
+    }
+
+    .hot-number {
+      background-color: #ffcccb;
+    }
+
+    .cold-number {
+      background-color: #cce5ff;
+    }
+
+    .recommended-plays {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .play-item {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .play-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .play-item h3 {
+      margin-top: 0;
+      color: #007bff;
+      font-size: 1.1em;
+    }
+
+    .play-item p {
+      margin: 10px 0;
+      font-size: 0.9em;
+    }
+
+    .play-item .explanation {
+      font-style: italic;
+      color: #6c757d;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>輪盤數字機率計算器</h1>
+  <div class="section">
+    <h2>下一次最可能出現的數字（前10名）</h2>
+    <div id="topProbabilities">請先添加一些數字！</div>
+  </div>
+  <div class="section">
+    <div class="input-group">
+      <input type="number" id="numberInput" min="0" max="36" placeholder="輸入數字">
+      <button onclick="addNumber()">添加數字</button>
+    </div>
+    <ul id="numbersList"></ul>
+  </div>
+  <div class="section">
+    <h2>最熱門和最冷門的數字</h2>
+    <div id="hotColdNumbers">
+      <div class="hot-cold-column">
+        <h3>最熱門的數字</h3>
+        <div id="hotNumbers"></div>
+      </div>
+      <div class="hot-cold-column">
+        <h3>最冷門的數字</h3>
+        <div id="coldNumbers"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <h2>推薦玩法</h2>
+    <div id="recommendedPlays"></div>
+  </div>
+
+  <div class="section">
+    <h2>所有數字下一次機率</h2>
+    <table class="probability-table" id="probabilityTable">
+      <tr>
+        <th>數字</th>
+        <th>下一次出現機率</th>
+      </tr>
+    </table>
+  </div>
+
+  <script>
+    let numbers = [];
+    let numberCounts = {};
+
+
+    function addNumber() {
+      const input = document.getElementById('numberInput');
+      const number = parseInt(input.value);
+      if (number >= 0 && number <= 36) {
+        numbers.push(number);
+        updateNumbersList();
+        calculateProbability();
+        input.value = '';
+      } else {
+        alert('請輸入0到36之間的數字');
+      }
+    }
+
+    function updateNumbersList() {
+      const list = document.getElementById('numbersList');
+      list.innerHTML = '';
+      const counts = {};
+      numbers.forEach(num => {
+        counts[num] = (counts[num] || 0) + 1;
+      });
+      numbers.forEach((num, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${num} (第${counts[num]}次)`;
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '刪除';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.onclick = () => deleteNumber(index);
+        li.appendChild(deleteBtn);
+        list.appendChild(li);
+      });
+    }
+
+    function deleteNumber(index) {
+      numbers.splice(index, 1);
+      updateNumbersList();
+      calculateProbability();
+    }
+
+    function calculateProbability() {
+      if (numbers.length === 0) {
+        document.getElementById('topProbabilities').innerHTML = "請先添加一些數字！";
+        document.getElementById('probabilityTable').innerHTML = '<tr><th>數字</th><th>下一次出現機率</th></tr>';
+        document.getElementById('hotNumbers').innerHTML = "請先添加一些數字！";
+        document.getElementById('coldNumbers').innerHTML = "請先添加一些數字！";
+        document.getElementById('recommendedPlays').innerHTML = "請先添加一些數字！";
+        return;
+      }
+
+      const totalSpins = numbers.length;
+      const numberCounts = {};
+      const probabilities = {};
+
+      // 初始化所有數字的計數
+      for (let i = 0; i <= 36; i++) {
+        numberCounts[i] = 0;
+      }
+
+      // 計算每個數字出現的次數
+      numbers.forEach(num => {
+        numberCounts[num]++;
+      });
+
+      // 計算每個數字下一次出現的機率
+      for (let i = 0; i <= 36; i++) {
+        probabilities[i] = (totalSpins - numberCounts[i]) / (totalSpins * 37);
+      }
+
+      // 更新前10名機率
+      const topProbabilities = Object.entries(probabilities)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      const topProbabilitiesDiv = document.getElementById('topProbabilities');
+      topProbabilitiesDiv.innerHTML = '';
+      topProbabilities.forEach(([number, probability]) => {
+        const item = document.createElement('div');
+        item.className = 'probability-item';
+        item.innerHTML = `<strong>${number}</strong><br>${(probability * 100).toFixed(2)}%`;
+        topProbabilitiesDiv.appendChild(item);
+      });
+
+      // 更新機率表格
+      const table = document.getElementById('probabilityTable');
+      table.innerHTML = '<tr><th>數字</th><th>下一次出現機率</th></tr>';
+      for (let i = 0; i <= 36; i++) {
+        const row = table.insertRow(-1);
+        const cell1 = row.insertCell(0);
+        const cell2 = row.insertCell(1);
+        cell1.textContent = i;
+        cell2.textContent = `${(probabilities[i] * 100).toFixed(2)}%`;
+      }
+
+      // 更新最熱門和最冷門的數字（包括出現零次的數字）
+      const sortedCounts = Object.entries(numberCounts)
+        .sort((a, b) => b[1] - a[1]);
+
+      const hotNumbers = sortedCounts.slice(0, 5);
+      const coldNumbers = sortedCounts.slice(-5).reverse();
+
+      const hotNumbersDiv = document.getElementById('hotNumbers');
+      hotNumbersDiv.innerHTML = '';
+      hotNumbers.forEach(([number, count]) => {
+        const item = document.createElement('div');
+        item.className = 'probability-item hot-number';
+        item.innerHTML = `<strong>${number}</strong><br>
+                    出現次數: ${count}<br>
+                    出現機率: ${((count / totalSpins) * 100).toFixed(2)}%`;
+        hotNumbersDiv.appendChild(item);
+      });
+
+      const coldNumbersDiv = document.getElementById('coldNumbers');
+      coldNumbersDiv.innerHTML = '';
+      coldNumbers.forEach(([number, count]) => {
+        const item = document.createElement('div');
+        item.className = 'probability-item cold-number';
+        item.innerHTML = `<strong>${number}</strong><br>
+                    出現次數: ${count}<br>
+                    出現機率: ${((count / totalSpins) * 100).toFixed(2)}%`;
+        coldNumbersDiv.appendChild(item);
+      });
+
+      // 更新推薦玩法
+      const recommendedPlaysDiv = document.getElementById('recommendedPlays');
+      recommendedPlaysDiv.innerHTML = '';
+
+      // 玩法1：選擇最冷門的數字
+      const coldestNumber = coldNumbers[0][0];
+      addPlayItem('玩法1', `選擇最冷門的數字 ${coldestNumber}`, '長期未出現的數字可能即將出現');
+
+      // 玩法2：選擇最熱門數字的鄰近數字
+      const hottestNumber = parseInt(hotNumbers[0][0]);
+      const neighborNumbers = [
+        (hottestNumber - 1 + 37) % 37,
+        (hottestNumber + 1) % 37
+      ];
+      addPlayItem('玩法2', `選擇最熱門數字 ${hottestNumber} 的鄰近數字 ${neighborNumbers.join(' 或 ')}`, '熱門數字附近可能會連續出現');
+
+      // 玩法3：選擇出現次數接近平均的數字
+      const avgCount = totalSpins / 37;
+      const balancedNumbers = Object.entries(numberCounts)
+        .sort((a, b) => Math.abs(a[1] - avgCount) - Math.abs(b[1] - avgCount))
+        .slice(0, 3)
+        .map(([num]) => num);
+      addPlayItem('玩法3', `選擇出現次數接近平均的數字 ${balancedNumbers.join(', ')}`, '這些數字的出現頻率最接近理論概率');
+
+      // 新增玩法4：選擇紅黑交替
+      const lastNumber = numbers[numbers.length - 1];
+      const nextColor = isRed(lastNumber) ? '黑色' : '紅色';
+      addPlayItem('玩法4', `選擇${nextColor}數字`, '根據紅黑交替的概念');
+
+      // 新增玩法5：選擇奇偶交替
+      const lastParity = lastNumber % 2 === 0 ? '偶數' : '奇數';
+      const nextParity = lastParity === '偶數' ? '奇數' : '偶數';
+      addPlayItem('玩法5', `選擇${nextParity}`, '根據奇偶交替的概念');
+
+      // 新增玩法6：選擇高低數交替
+      const lastHigh = lastNumber > 18;
+      const nextRange = lastHigh ? '低數（1-18）' : '高數（19-36）';
+      addPlayItem('玩法6', `選擇${nextRange}`, '根據高低數交替的概念');
+
+      // 玩法7：選擇最近26次未出現的數字
+      const recentNumbers = numbers.slice(-26);
+      const missingNumbers = Array.from({ length: 37 }, (_, i) => i)
+        .filter(num => !recentNumbers.includes(num));
+      addPlayItem('玩法7', `選擇最近26次未出現的數字之一：${missingNumbers.join(', ')}`, '這些數字在短期內未出現，可能即將出現');
+
+      // 玩法8：選擇連續出現的數字
+      const consecutiveNumbers = findConsecutiveNumbers(numbers.slice(-10), 2);
+      addPlayItem('玩法8', `選擇最近連續出現的數字：${consecutiveNumbers.join(', ')}`, '這些數字可能會繼續連續出現');
+
+      // 玩法9：選擇數字組合
+      const combinations = ['紅色+奇數', '紅色+偶數', '黑色+奇數', '黑色+偶數'];
+      const randomCombination = combinations[Math.floor(Math.random() * combinations.length)];
+      addPlayItem('玩法9', `選擇數字組合：${randomCombination}`, '根據多重條件選擇數字');
+
+      // 玩法10：選擇最近出現頻率增加的數字
+      const trendingNumbers = findTrendingNumbers(numbers, 20, 5);
+      addPlayItem('玩法10', `選擇最近出現頻率增加的數字：${trendingNumbers.join(', ')}`, '這些數字最近出現頻率有所增加');
+
+      function updateZoneCombinationAnalysis() {
+        const analysisDiv = document.getElementById('zoneCombinationAnalysis');
+        const recommendation = analyzeZoneCombinationBet();
+        analysisDiv.innerHTML = `<pre>${recommendation}</pre>`;
+      }
+      updateZoneCombinationAnalysis()
+    }
+
+    function addPlayItem(title, strategy, explanation) {
+      const playItem = document.createElement('div');
+      playItem.className = 'play-item';
+      playItem.innerHTML = `
+        <h3>${title}</h3>
+        <p>${strategy}</p>
+        <p class="explanation">${explanation}</p>
+    `;
+      document.getElementById('recommendedPlays').appendChild(playItem);
+    }
+
+    function isRed(number) {
+      const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+      return redNumbers.includes(number);
+    }
+
+    function findConsecutiveNumbers(numbers, minOccurrences) {
+      const counts = {};
+      numbers.forEach(num => {
+        counts[num] = (counts[num] || 0) + 1;
+      });
+      return Object.entries(counts)
+        .filter(([_, count]) => count >= minOccurrences)
+        .map(([num, _]) => parseInt(num));
+    }
+
+    function findTrendingNumbers(numbers, windowSize, topN) {
+      const recentNumbers = numbers.slice(-windowSize);
+      const oldNumbers = numbers.slice(-windowSize * 2, -windowSize);
+
+      const recentCounts = {};
+      const oldCounts = {};
+
+      recentNumbers.forEach(num => {
+        recentCounts[num] = (recentCounts[num] || 0) + 1;
+      });
+
+      oldNumbers.forEach(num => {
+        oldCounts[num] = (oldCounts[num] || 0) + 1;
+      });
+
+      const trends = Object.keys(recentCounts).map(num => {
+        const recentFreq = recentCounts[num] / windowSize;
+        const oldFreq = (oldCounts[num] || 0) / windowSize;
+        return [parseInt(num), recentFreq - oldFreq];
+      });
+
+      return trends
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, topN)
+        .map(([num, _]) => num);
+    }
+
+
+
+  </script>
+</body>
+
+</html
